@@ -12,8 +12,8 @@ mongoose
   .catch((e) => console.error(e));
 
 const routes = require("./routes");
-app.use(routes);
 app.use(express.json());
+app.use(routes);
 
 app.use("/users", userRoutes);
 
