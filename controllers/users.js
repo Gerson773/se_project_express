@@ -1,10 +1,20 @@
 const User = require("../models/user");
+const {
+  ValidationError,
+  InternalServerError,
+  NotFoundError,
+} = require("../utils/errors");
 
 const getUsers = (req, res) => {
   User.find({})
     .then((users) => res.status(200).send(users))
-    .catch((e) => {
-      res.status(500).send({ message: "Getting users failed", e });
+    .catch((err) => {
+      if (err.name === InternalServerError) {
+        return res.status(err.statusCode).send({ message: err.message });
+      } else {
+        console.error("Unexpected error:", err);
+        res.status(500).send({ message: "An unexpected error occurred" });
+      }
     });
 };
 
@@ -14,25 +24,37 @@ const getUser = (req, res) => {
   User.findById(userId)
     .then((user) => {
       if (!user) {
-        return res.status(404).send({ message: "User not found" });
+        throw new NotFoundError("User not found");
       }
 
       res.status(200).send(user);
     })
-    .catch((e) => {
-      res.status(500).send({ message: "Getting user failed", e });
+    .catch((err) => {
+      if (err.name === NotFoundError) {
+        return res.status(err.statusCode).send({ message: err.message });
+      } else {
+        console.error("Unexpected error:", err);
+        res.status(500).send({ message: "An unexpected error occurred" });
+      }
     });
 };
 
 const createUser = (req, res) => {
   const { name, avatar } = req.body;
-
   User.create({ name, avatar })
     .then((user) => {
       res.send(user);
     })
-    .catch((e) => {
-      res.status(500).send({ message: "Creating user failed", e });
+    .catch((err) => {
+      console.error(err);
+      if (err.name === ValidationError) {
+        return res.status(err.statusCode).send({ message: err.message });
+      } else {
+        console.error(err);
+        res
+          .status(500)
+          .send({ message: "An error has occurred on the Server Error", err });
+      }
     });
 };
 

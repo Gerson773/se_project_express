@@ -17,6 +17,13 @@ app.use(routes);
 
 app.use("/users", userRoutes);
 
+app.use((req, res, next) => {
+  req.user = {
+    _id: "65978d66ae28e0ffac73ec97",
+  };
+  next();
+});
+
 app.listen(PORT, () => {
   console.log(`App listening at port ${PORT}`);
   console.log("Testing server");
