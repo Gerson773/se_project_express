@@ -1,25 +1,25 @@
 const User = require("../models/user");
 const {
-  ValidationError,
-  InternalServerError,
-  NotFoundError,
-} = require("../utils/errors");
+  DEFAULT,
+  ERROR_MESSAGES,
+  OK,
+  NOT_FOUND,
+  BAD_REQUEST,
+} = require("../utils/constants");
+
+const { NotFoundError } = require("../utils/errors/NotFoundError");
 
 const getUsers = (req, res) => {
   User.find({})
-    .then((users) => res.status(200).send(users))
+    .then((users) => res.status(OK).send(users))
     .catch((err) => {
-      if (err.name === InternalServerError) {
-        return res.status(err.statusCode).send({ message: err.message });
-      } else {
-        console.error("Unexpected error:", err);
-        res.status(500).send({ message: "An unexpected error occurred" });
-      }
+      console.error("Unexpected error:", err);
+      res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
 const getUser = (req, res) => {
-  const userId = req.params.userId;
+  const userId = req.params;
 
   User.findById(userId)
     .then((user) => {
@@ -27,15 +27,23 @@ const getUser = (req, res) => {
         throw new NotFoundError("User not found");
       }
 
-      res.status(200).send(user);
+      res.status(OK).send(user);
     })
     .catch((err) => {
-      if (err.name === NotFoundError) {
-        return res.status(err.statusCode).send({ message: err.message });
-      } else {
-        console.error("Unexpected error:", err);
-        res.status(500).send({ message: "An unexpected error occurred" });
+      if (err.name === "CastError") {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
       }
+      if (err instanceof NotFoundError) {
+        return res
+          .status(NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.NOT_FOUND });
+      }
+      console.error("Unexpected error getting User:", err);
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
@@ -47,14 +55,14 @@ const createUser = (req, res) => {
     })
     .catch((err) => {
       console.error(err);
-      if (err.name === ValidationError) {
-        return res.status(err.statusCode).send({ message: err.message });
-      } else {
-        console.error(err);
-        res
-          .status(500)
-          .send({ message: "An error has occurred on the Server Error", err });
+      if (err.name === "ValidationError") {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
       }
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 

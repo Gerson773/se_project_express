@@ -1,5 +1,12 @@
 const ClothingItem = require("../models/clothingItem");
-const ItemNotFoundError = require("../utils/errors");
+const {
+  OK,
+  NOT_FOUND,
+  ERROR_MESSAGES,
+  DEFAULT,
+  BAD_REQUEST,
+} = require("../utils/constants");
+const ItemNotFoundError = require("../utils/errors/ItemNotFoundError");
 
 module.exports.likeItem = (req, res) =>
   ClothingItem.findByIdAndUpdate(
@@ -7,16 +14,23 @@ module.exports.likeItem = (req, res) =>
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
-    .then((item) => res.status(200).send({ data: item }))
-    .catch((err) => {
-      if (err.name === ItemNotFoundError) {
-        return res.status(404).send({ message: "Item not found" });
-      } else {
-        console.error(err);
-        res
-          .status(500)
-          .send({ message: "An error has occurred on the server", error });
+    .then((item) => {
+      if (!item) {
+        throw new ItemNotFoundError("Item not found");
       }
+      res.status(OK).send({ data: item });
+    })
+
+    .catch((err) => {
+      if (err instanceof ItemNotFoundError) {
+        return res
+          .status(NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+      }
+      console.error(err);
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 
 module.exports.dislikeItem = (req, res) =>
@@ -25,14 +39,23 @@ module.exports.dislikeItem = (req, res) =>
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .then((item) => res.status(200).send({ data: item }))
-    .catch((err) => {
-      if (err.name === ItemNotFoundError) {
-        return res.status(404).send({ message: "Item not found" });
-      } else {
-        console.error(err);
-        res
-          .status(500)
-          .send({ message: "An error has occurred on the server", error });
+    .then((item) => {
+      if (!item) {
+        throw new ItemNotFoundError("Item not found");
       }
+      res.status(OK).send({ data: item });
+    })
+    .catch((err) => {
+      if (err instanceof ItemNotFoundError) {
+        return res.status(NOT_FOUND).send({ message: err.message });
+      }
+      if (err.name === "CastError") {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
+      }
+      console.error(err);
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });

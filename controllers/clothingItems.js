@@ -1,9 +1,17 @@
 const ClothingItem = require("../models/clothingItem");
+// const { InternalServerError } = require("../utils/errors/InternalServerError");
+const { CastError } = require("../utils/errors/CastError");
+
+const { ValidationError } = require("../utils/errors/ValidationError");
+const { NotFoundError } = require("../utils/errors/NotFoundError");
 const {
-  NotFoundError,
-  ValidationError,
-  InternalServerError,
-} = require("../utils/errors");
+  OK,
+  CREATED,
+  BAD_REQUEST,
+  NOT_FOUND,
+  DEFAULT,
+  ERROR_MESSAGES,
+} = require("../utils/constants");
 
 const createItem = (req, res) => {
   console.log(req);
@@ -11,40 +19,35 @@ const createItem = (req, res) => {
 
   const { name, weather, imageURL } = req.body;
 
-  if (!ownerId) {
-    return res.status(400).send({ message: "Owner ID is required" });
+  if (!req.user._id) {
+    return res
+      .status(BAD_REQUEST)
+      .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
   }
 
-  ClothingItem.create({ name, weather, imageURL, owner: req.user._id })
+  return ClothingItem.create({ name, weather, imageURL, owner: req.user._id })
     .then((item) => {
       console.log(item);
-      res.status(201).send({ data: item });
-    })
-    .catch((err) => {
-      if (err.name === "ValidationError") {
-        throw new ValidationError("Validation error: " + err.message);
-      } else if (e.name === "MongoError" && err.code === 11000) {
-        throw new InternalServerError("Duplicate key error");
-      } else {
-        console.error("Error from createItem:", e);
-        throw new InternalServerError("Error from createItem");
-      }
+      res.status(CREATED).send({ data: item });
     })
     .catch((e) => {
-      res.status(500).send({ messsage: "Error from createItem", e });
+      if (e.name === ValidationError) {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
+      }
+      return res
+        .status(DEFAULT)
+        .send({ messsage: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
 const getItems = (req, res) => {
   ClothingItem.find({})
-    .then((items) => res.status(200).send(items))
+    .then((items) => res.status(OK).send(items))
     .catch((err) => {
-      if (err.name === InternalServerError) {
-        res.status(err.statusCode).send({ message: err.message });
-      } else {
-        console.error("Unexpected error:", e);
-        res.status(500).send({ message: "An unexpected error occurred", e });
-      }
+      console.error("Unexpected error:", err);
+      res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
@@ -54,19 +57,17 @@ const updateItem = (req, res) => {
 
   ClothingItem.findByIdAndUpdate(itemId, { $set: { imageURL } }, { new: true })
     .orFail(() => {
-      const error = new Error("Item ID not found");
-      error.statusCode = 404;
-      throw error;
+      throw new NotFoundError("Item not found");
     })
-    .then((item) => res.status(200).send({ data: item }))
+    .then((item) => res.status(OK).send({ data: item }))
     .catch((err) => {
-      if (err.name === NotFoundError) {
-        res.status(err.statusCode).send({ message: err.message });
+      if (err instanceof NotFoundError) {
+        res
+          .status(NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       } else {
         console.error(err);
-        res
-          .status(500)
-          .send({ message: "An error has occurred on the server", err });
+        res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       }
     });
 };
@@ -74,25 +75,43 @@ const updateItem = (req, res) => {
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
 
-  console.log(itemId);
   ClothingItem.findByIdAndDelete(itemId)
     .orFail(() => {
-      const error = new Error("Item ID not found");
-      error.statusCode = 404;
-      throw error;
+      throw new NotFoundError("Item not found");
     })
     .then((item) => res.status(204).send(item))
     .catch((err) => {
-      if (err.name === NotFoundError) {
-        res.status(err.statusCode).send({ message: err.message });
+      if (err instanceof CastError) {
+        res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       } else {
         console.error(err);
-        res
-          .status(500)
-          .send({ message: "An error has occurred on the server", err });
+        res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       }
     });
 };
+
+// const deleteItem = (req, res) => {
+//   const { itemId } = req.params;
+
+//   console.log(itemId);
+//   ClothingItem.findByIdAndDelete(itemId)
+//     .orFail(() => {
+//       throw new NotFoundError("Item not found");
+//     })
+//     .then((item) => res.status(204).send(item))
+//     .catch((err) => {
+//       if (err.name === NotFoundError) {
+//         res.status(err.statusCode).send({ message: err.message });
+//       } else {
+//         console.error(err);
+//         res
+//           .status(500)
+//           .send({ message: "An error has occurred on the server", err });
+//       }
+//     });
+// };
 
 // const updateItem = (req, res) => {
 //   const { itemId } = req.params;
