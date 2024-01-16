@@ -27,6 +27,13 @@ module.exports.likeItem = (req, res) =>
           .status(NOT_FOUND)
           .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       }
+
+      if (err.name === "CastError") {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
+      }
+
       console.error(err);
       return res
         .status(DEFAULT)

@@ -1,8 +1,8 @@
 const ClothingItem = require("../models/clothingItem");
-// const { InternalServerError } = require("../utils/errors/InternalServerError");
-const { CastError } = require("../utils/errors/CastError");
+// // const { InternalServerError } = require("../utils/errors/InternalServerError");
+// const { CastError } = require("../utils/errors/CastError");
 
-const { ValidationError } = require("../utils/errors/ValidationError");
+// const { ValidationError } = require("../utils/errors/ValidationError");
 const { NotFoundError } = require("../utils/errors/NotFoundError");
 const {
   OK,
@@ -17,7 +17,7 @@ const createItem = (req, res) => {
   console.log(req);
   console.log(req.body);
 
-  const { name, weather, imageURL } = req.body;
+  const { name, weather, imageUrl } = req.body;
 
   if (!req.user._id) {
     return res
@@ -25,13 +25,13 @@ const createItem = (req, res) => {
       .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
   }
 
-  return ClothingItem.create({ name, weather, imageURL, owner: req.user._id })
+  return ClothingItem.create({ name, weather, imageUrl, owner: req.user._id })
     .then((item) => {
       console.log(item);
       res.status(CREATED).send({ data: item });
     })
     .catch((e) => {
-      if (e.name === ValidationError) {
+      if (e.name === "ValidationError") {
         return res
           .status(BAD_REQUEST)
           .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
@@ -51,27 +51,6 @@ const getItems = (req, res) => {
     });
 };
 
-const updateItem = (req, res) => {
-  const { itemId } = req.params;
-  const { imageURL } = req.body;
-
-  ClothingItem.findByIdAndUpdate(itemId, { $set: { imageURL } }, { new: true })
-    .orFail(() => {
-      throw new NotFoundError("Item not found");
-    })
-    .then((item) => res.status(OK).send({ data: item }))
-    .catch((err) => {
-      if (err instanceof NotFoundError) {
-        res
-          .status(NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-      } else {
-        console.error(err);
-        res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-      }
-    });
-};
-
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
 
@@ -79,9 +58,13 @@ const deleteItem = (req, res) => {
     .orFail(() => {
       throw new NotFoundError("Item not found");
     })
-    .then((item) => res.status(204).send(item))
+    .then((item) => res.status(OK).send(item))
     .catch((err) => {
-      if (err instanceof CastError) {
+      if (err instanceof NotFoundError) {
+        res.status(NOT_FOUND).send({ message: ERROR_MESSAGES.NOT_FOUND });
+      }
+
+      if (err.name === "CastError") {
         res
           .status(BAD_REQUEST)
           .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
@@ -92,54 +75,8 @@ const deleteItem = (req, res) => {
     });
 };
 
-// const deleteItem = (req, res) => {
-//   const { itemId } = req.params;
-
-//   console.log(itemId);
-//   ClothingItem.findByIdAndDelete(itemId)
-//     .orFail(() => {
-//       throw new NotFoundError("Item not found");
-//     })
-//     .then((item) => res.status(204).send(item))
-//     .catch((err) => {
-//       if (err.name === NotFoundError) {
-//         res.status(err.statusCode).send({ message: err.message });
-//       } else {
-//         console.error(err);
-//         res
-//           .status(500)
-//           .send({ message: "An error has occurred on the server", err });
-//       }
-//     });
-// };
-
-// const updateItem = (req, res) => {
-//   const { itemId } = req.params;
-//   const { imageURL } = req.body;
-
-//   ClothingItem.findByIdAndUpdate(itemId, { $set: { imageURL } })
-//     .orFail()
-//     .then((item) => res.status(200).send({ data: item }))
-//     .catch((e) => {
-//       res.status(500).send({ message: "Updating items failed", e });
-//     });
-// };
-
-// const deleteItem = (req, res) => {
-//   const { itemId } = req.params;
-
-//   console.log(itemId);
-//   ClothingItem.findByIdAndDelete(itemId)
-//     .orFail()
-//     .then((item) => res.status(204).send(item))
-//     .catch((e) => {
-//       res.status(500).send({ message: "Deleting items failed", e });
-//     });
-// };
-
 module.exports = {
   createItem,
   getItems,
-  updateItem,
   deleteItem,
 };
