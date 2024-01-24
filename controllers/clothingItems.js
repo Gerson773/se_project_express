@@ -1,8 +1,5 @@
 const ClothingItem = require("../models/clothingItem");
-// // const { InternalServerError } = require("../utils/errors/InternalServerError");
-// const { CastError } = require("../utils/errors/CastError");
 
-// const { ValidationError } = require("../utils/errors/ValidationError");
 const { NotFoundError } = require("../utils/errors/NotFoundError");
 const {
   OK,
@@ -11,6 +8,7 @@ const {
   NOT_FOUND,
   DEFAULT,
   ERROR_MESSAGES,
+  FORBIDDEN,
 } = require("../utils/constants");
 
 const createItem = (req, res) => {
@@ -53,25 +51,38 @@ const getItems = (req, res) => {
 
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
+  const userId = req.user._id;
 
   ClothingItem.findByIdAndDelete(itemId)
     .orFail(() => {
       throw new NotFoundError("Item not found");
     })
-    .then((item) => res.status(OK).send(item))
+    .then((item) => {
+      if (item.owner.toString() !== userId) {
+        return res
+          .status(FORBIDDEN)
+          .send({ message: ERROR_MESSAGES.FORBIDDEN });
+      }
+
+      return res.status(OK).send(item);
+    })
     .catch((err) => {
       if (err instanceof NotFoundError) {
-        res.status(NOT_FOUND).send({ message: ERROR_MESSAGES.NOT_FOUND });
+        return res
+          .status(NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.NOT_FOUND });
       }
 
       if (err.name === "CastError") {
-        res
+        return res
           .status(BAD_REQUEST)
           .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-      } else {
-        console.error(err);
-        res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
       }
+
+      console.error(err);
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 

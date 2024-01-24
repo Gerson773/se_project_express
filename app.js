@@ -1,8 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 
-//
-
 const mongoose = require("mongoose");
+
+const cors = require("cors");
+
+const auth = require("./middlewares/auth");
 
 const { PORT = 3001 } = process.env;
 const app = express();
@@ -15,17 +18,17 @@ mongoose
   .catch((e) => console.error(e));
 
 const routes = require("./routes");
+const { createUser, login } = require("./controllers/users");
 
 app.use(express.json());
+app.use(cors());
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: "65978d66ae28e0ffac73ec97",
-  };
-  next();
-});
+app.use(auth);
 
 app.use(routes);
+
+app.post("/signin", login);
+app.post("/signup", createUser);
 
 app.listen(PORT, () => {
   console.log(`App listening at port ${PORT}`);

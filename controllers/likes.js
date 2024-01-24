@@ -6,7 +6,7 @@ const {
   DEFAULT,
   BAD_REQUEST,
 } = require("../utils/constants");
-const ItemNotFoundError = require("../utils/errors/ItemNotFoundError");
+const { ItemNotFoundError } = require("../utils/errors/ItemNotFoundError");
 
 module.exports.likeItem = (req, res) =>
   ClothingItem.findByIdAndUpdate(
