@@ -28,8 +28,8 @@ const createItem = (req, res) => {
       console.log(item);
       res.status(CREATED).send({ data: item });
     })
-    .catch((e) => {
-      if (e.name === "ValidationError") {
+    .catch((err) => {
+      if (err.name === "ValidationError") {
         return res
           .status(BAD_REQUEST)
           .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
@@ -51,20 +51,21 @@ const getItems = (req, res) => {
 
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
-  const userId = req.user._id;
 
   ClothingItem.findByIdAndDelete(itemId)
     .orFail(() => {
       throw new NotFoundError("Item not found");
     })
     .then((item) => {
-      if (item.owner.toString() !== userId) {
+      if (String(item.owner) !== req.user._id) {
         return res
           .status(FORBIDDEN)
           .send({ message: ERROR_MESSAGES.FORBIDDEN });
       }
 
-      return res.status(OK).send(item);
+      return item
+        .deletedOne()
+        .then(() => res.send({ message: ERROR_MESSAGES.ITEM_DELETED }));
     })
     .catch((err) => {
       if (err instanceof NotFoundError) {

@@ -8,48 +8,10 @@ const {
   BAD_REQUEST,
   CREATED,
   UNAUTHORIZED,
+  DUPLICATE_EMAIL,
 } = require("../utils/constants");
 const { EmailInUseError } = require("../utils/errors/EmailInUseError");
-const { NotFoundError } = require("../utils/errors/NotFoundError");
 const { generateToken } = require("../utils/config");
-
-const getUsers = (req, res) => {
-  User.find({})
-    .then((users) => res.status(OK).send(users))
-    .catch((err) => {
-      console.error("Unexpected error:", err);
-      res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-    });
-};
-
-const getUser = (req, res) => {
-  const { userId } = req.params;
-
-  User.findById(userId)
-    .then((user) => {
-      if (!user) {
-        throw new NotFoundError("User not found");
-      }
-
-      res.status(OK).send(user);
-    })
-    .catch((err) => {
-      if (err.name === "CastError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
-      }
-      if (err instanceof NotFoundError) {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.NOT_FOUND });
-      }
-      console.error("Unexpected error getting User:", err);
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-    });
-};
 
 const createUser = (req, res) => {
   const { name, avatar, email, password } = req.body;
@@ -83,7 +45,7 @@ const createUser = (req, res) => {
 
       if (err.message === ERROR_MESSAGES.EMAIL_ALREADY_IN_USE) {
         return res
-          .status(BAD_REQUEST)
+          .status(DUPLICATE_EMAIL)
           .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
       }
       return res
@@ -118,20 +80,34 @@ const login = (req, res) => {
 };
 
 const getCurrentUser = (req, res) => {
-  const currentUser = req.user;
-  if (!currentUser) {
-    return res.status(NOT_FOUND).send({ message: ERROR_MESSAGES.NOT_FOUND });
-  }
-  return res.status(OK).send(currentUser);
-};
+  const userId = req.user._id;
 
-// controllers/users.js
+  User.findById(userId)
+    .then((user) => {
+      if (!user) {
+        return res
+          .status(NOT_FOUND)
+          .send({ message: ERROR_MESSAGES.NOT_FOUND });
+      }
+      return res.status(OK).send(user);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res
+        .status(DEFAULT)
+        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+    });
+};
 
 const updateUserProfile = (req, res) => {
   const { name, avatar } = req.body;
   const userId = req.user._id;
 
-  User.findByIdAndUpdate(userId, { name, avatar }, { new: true })
+  User.findByIdAndUpdate(
+    userId,
+    { name, avatar },
+    { new: true, runValidators: true },
+  )
     .then((user) => {
       if (!user) {
         return res
@@ -143,16 +119,18 @@ const updateUserProfile = (req, res) => {
       return res.status(OK).send(updatedUser);
     })
     .catch((err) => {
-      console.error(err);
+      if (err.name === "ValidationError") {
+        return res
+          .status(BAD_REQUEST)
+          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
+      }
       return res
         .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+        .send({ messsage: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
 module.exports = {
-  getUsers,
-  getUser,
   createUser,
   login,
   getCurrentUser,

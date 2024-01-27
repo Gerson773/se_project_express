@@ -20,6 +20,7 @@ const ERROR_MESSAGES = {
   INCORRECT_CREDENTIALS: "Incorrect email or password",
   FORBIDDEN: "Access denied",
   DUPLICATE_EMAIL: "Email address already exists",
+  ITEM_DELETED: "This item has been deleted by the user",
 };
 
 module.exports = {
