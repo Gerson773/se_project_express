@@ -6,13 +6,13 @@ const handleAuthError = (res) => {
   res.status(UNAUTHORIZED).send({ message: ERROR_MESSAGES.FORBIDDEN });
 };
 
-const extractBearerToken = (header) => header.replace("Bearer", "");
+const extractBearerToken = (header) => header.replace("Bearer ", "");
 
 module.exports = (req, res, next) => {
   const { authorization } = req.headers;
 
   if (!authorization || !authorization.startsWith("Bearer ")) {
-    return handleAuthError();
+    return handleAuthError(res);
   }
 
   const token = extractBearerToken(authorization);
@@ -21,7 +21,7 @@ module.exports = (req, res, next) => {
   try {
     payload = jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    return handleAuthError();
+    return handleAuthError(res);
   }
 
   req.user = payload;

@@ -1,9 +1,6 @@
-const express = require("express");
 const router = require("express").Router();
 
 const auth = require("../middlewares/auth");
-
-const app = express();
 
 const {
   createItem,
@@ -15,7 +12,7 @@ const { likeItem, dislikeItem } = require("../controllers/likes");
 
 router.get("/", getItems);
 
-app.use(auth);
+router.use(auth);
 
 router.delete("/:itemId/likes", dislikeItem);
 

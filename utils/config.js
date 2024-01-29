@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const { NODE_ENV, JWT_SECRET } = process.env;
 
-const genrateToken = (user) => {
+const generateToken = (user) => {
   const token = jwt.sign(
     { _id: user._id },
     NODE_ENV === "production" ? JWT_SECRET : "secrete-key-for-now",
@@ -12,4 +12,4 @@ const genrateToken = (user) => {
   return token;
 };
 
-module.exports = { NODE_ENV, JWT_SECRET, genrateToken };
+module.exports = { NODE_ENV, JWT_SECRET, generateToken };

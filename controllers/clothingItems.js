@@ -52,7 +52,7 @@ const getItems = (req, res) => {
 const deleteItem = (req, res) => {
   const { itemId } = req.params;
 
-  ClothingItem.findByIdAndDelete(itemId)
+  ClothingItem.findById(itemId)
     .orFail(() => {
       throw new NotFoundError("Item not found");
     })
@@ -64,7 +64,7 @@ const deleteItem = (req, res) => {
       }
 
       return item
-        .deletedOne()
+        .deleteOne()
         .then(() => res.send({ message: ERROR_MESSAGES.ITEM_DELETED }));
     })
     .catch((err) => {
