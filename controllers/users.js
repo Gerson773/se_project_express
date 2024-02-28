@@ -64,7 +64,7 @@ const login = (req, res) => {
   return User.findUserByCredentials(email, password)
     .then((user) => {
       const token = generateToken(user);
-      return res.status(OK).send({ token });
+      return res.status(OK).send({ token, user });
     })
     .catch((err) => {
       console.error("Unexpected error:", err);
@@ -124,6 +124,9 @@ const updateUserProfile = (req, res) => {
           .status(BAD_REQUEST)
           .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
       }
+
+      console.error("Error updating user profile:", err);
+
       return res
         .status(DEFAULT)
         .send({ messsage: ERROR_MESSAGES.UNEXPECTED_ERROR });
