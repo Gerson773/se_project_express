@@ -42,7 +42,10 @@ const createItem = (req, res) => {
 
 const getItems = (req, res) => {
   ClothingItem.find({})
-    .then((items) => res.status(OK).send(items))
+    .then((items) => {
+      const sortedItems = [...items].sort((a, b) => b.createdAt - a.createdAt);
+      res.status(OK).send(sortedItems);
+    })
     .catch((err) => {
       console.error("Unexpected error:", err);
       res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
