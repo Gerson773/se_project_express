@@ -7,6 +7,10 @@ const {
   getItems,
   deleteItem,
 } = require("../controllers/clothingItems");
+const {
+  validateClothingItemBody,
+  validateClothingItemId,
+} = require("../middlewares/validation");
 
 const { likeItem, dislikeItem } = require("../controllers/likes");
 
@@ -20,6 +24,6 @@ router.put("/:itemId/likes", likeItem);
 
 router.delete("/:itemId", deleteItem);
 
-router.post("/", createItem);
+router.post("/", validateClothingItemBody, validateClothingItemId, createItem);
 
 module.exports = router;

@@ -8,7 +8,7 @@ const {
 } = require("../utils/constants");
 const { ItemNotFoundError } = require("../utils/errors/ItemNotFoundError");
 
-module.exports.likeItem = (req, res) =>
+module.exports.likeItem = (req, res, next) =>
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $addToSet: { likes: req.user._id } },
@@ -20,27 +20,17 @@ module.exports.likeItem = (req, res) =>
       }
       res.status(OK).send({ data: item });
     })
-
     .catch((err) => {
       if (err instanceof ItemNotFoundError) {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+        next(new NotFoundError(ERROR_MESSAGES.UNEXPECTED_ERROR));
+      } else if (err.name === "CastError") {
+        next(new BadRequestError(ERROR_MESSAGES.INVALID_ID_FORMAT));
+      } else {
+        next(err);
       }
-
-      if (err.name === "CastError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
-      }
-
-      console.error(err);
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 
-module.exports.dislikeItem = (req, res) =>
+module.exports.dislikeItem = (req, res, next) =>
   ClothingItem.findByIdAndUpdate(
     req.params.itemId,
     { $pull: { likes: req.user._id } },
@@ -54,15 +44,10 @@ module.exports.dislikeItem = (req, res) =>
     })
     .catch((err) => {
       if (err instanceof ItemNotFoundError) {
-        return res.status(NOT_FOUND).send({ message: err.message });
+        next(new NotFoundError(ERROR_MESSAGES.NOT_FOUND));
+      } else if (err.name === "CastError") {
+        next(new BadRequestError(ERROR_MESSAGES.INVALID_ID_FORMAT));
+      } else {
+        next(err);
       }
-      if (err.name === "CastError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.INVALID_ID_FORMAT });
-      }
-      console.error(err);
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });

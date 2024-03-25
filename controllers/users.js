@@ -13,7 +13,7 @@ const {
 const { EmailInUseError } = require("../utils/errors/EmailInUseError");
 const { generateToken } = require("../utils/config");
 
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const { name, avatar, email, password } = req.body;
 
   if (!name || !avatar || !email || !password) {
@@ -38,23 +38,16 @@ const createUser = (req, res) => {
     .catch((err) => {
       console.error(err);
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({
-          message: ERROR_MESSAGES.VALID_EMAIL_REQUIRED,
-        });
+        next(new BAD_REQUEST(ERROR_MESSAGES.VALID_EMAIL_REQUIRED));
+      } else if (err.message === ERROR_MESSAGES.EMAIL_ALREADY_IN_USE) {
+        next(new DUPLICATE_EMAIL(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-
-      if (err.message === ERROR_MESSAGES.EMAIL_ALREADY_IN_USE) {
-        return res
-          .status(DUPLICATE_EMAIL)
-          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
-      }
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
   if (!password) {
     return res
@@ -67,15 +60,11 @@ const login = (req, res) => {
       return res.status(OK).send({ token, user });
     })
     .catch((err) => {
-      console.error("Unexpected error:", err);
       if (err.message === "Incorrect email or password") {
-        return res
-          .status(UNAUTHORIZED)
-          .send({ message: ERROR_MESSAGES.PASSWORD_REQUIRED });
+        next(new UNAUTHORIZED(ERROR_MESSAGES.PASSWORD_REQUIRED));
+      } else {
+        next(err);
       }
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
@@ -92,14 +81,11 @@ const getCurrentUser = (req, res) => {
       return res.status(OK).send(user);
     })
     .catch((err) => {
-      console.error(err);
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+      next(err);
     });
 };
 
-const updateUserProfile = (req, res) => {
+const updateUserProfile = (req, res, next) => {
   const { name, avatar } = req.body;
   const userId = req.user._id;
 
@@ -120,16 +106,10 @@ const updateUserProfile = (req, res) => {
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
+        next(new BAD_REQUEST(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-
-      console.error("Error updating user profile:", err);
-
-      return res
-        .status(DEFAULT)
-        .send({ messsage: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 

@@ -10,8 +10,10 @@ const {
   ERROR_MESSAGES,
   FORBIDDEN,
 } = require("../utils/constants");
+const { ValidationError } = require("../utils/errors/ValidationError");
+const { BadRequestError } = require("../utils/errors/BadRequestError");
 
-const createItem = (req, res) => {
+const createItem = (req, res, next) => {
   console.log(req);
   console.log(req.body);
 
@@ -30,29 +32,25 @@ const createItem = (req, res) => {
     })
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.VALIDATION_ERROR });
+        next(new ValidationError(ERROR_MESSAGES.VALIDATION_ERROR));
+      } else {
+        next(err);
       }
-      return res
-        .status(DEFAULT)
-        .send({ messsage: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
-const getItems = (req, res) => {
+const getItems = (req, res, next) => {
   ClothingItem.find({})
     .then((items) => {
       const sortedItems = [...items].sort((a, b) => b.createdAt - a.createdAt);
       res.status(OK).send(sortedItems);
     })
     .catch((err) => {
-      console.error("Unexpected error:", err);
-      res.status(DEFAULT).send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
+      next(err);
     });
 };
 
-const deleteItem = (req, res) => {
+const deleteItem = (req, res, next) => {
   const { itemId } = req.params;
 
   ClothingItem.findById(itemId)
@@ -72,21 +70,12 @@ const deleteItem = (req, res) => {
     })
     .catch((err) => {
       if (err instanceof NotFoundError) {
-        return res
-          .status(NOT_FOUND)
-          .send({ message: ERROR_MESSAGES.NOT_FOUND });
+        next(new NotFoundError(ERROR_MESSAGES.NOT_FOUND));
+      } else if (err.name === "CastError") {
+        next(new BadRequestError(ERROR_MESSAGES.UNEXPECTED_ERROR));
+      } else {
+        next(err);
       }
-
-      if (err.name === "CastError") {
-        return res
-          .status(BAD_REQUEST)
-          .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
-      }
-
-      console.error(err);
-      return res
-        .status(DEFAULT)
-        .send({ message: ERROR_MESSAGES.UNEXPECTED_ERROR });
     });
 };
 
