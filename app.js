@@ -19,14 +19,18 @@ mongoose
 
 const routes = require("./routes");
 const { createUser, login } = require("./controllers/users");
+const {
+  validateUserAuthentication,
+  validateUserBody,
+} = require("./middlewares/validation");
 
 app.use(express.json());
 app.use(cors());
 
 const { errors } = require("celebrate");
 
-app.post("/signin", login);
-app.post("/signup", createUser);
+app.post("/signin", validateUserAuthentication, login);
+app.post("/signup", validateUserBody, createUser);
 
 const { requestLogger, errorLogger } = require("./middlewares/logger");
 
